@@ -39,4 +39,4 @@ guess = ai.predict([vector])
 if guess[0] == 1:
     print(f"I think \"{user_input}\" is a FOOD.")
 else:
-    print(f"I think \"{user_input}\" is NOT an food.")
+    print(f"I think \"{user_input}\" is NOT a food.")
