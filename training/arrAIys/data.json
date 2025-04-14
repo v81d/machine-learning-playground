@@ -660,6 +660,22 @@
         "Should I treat others the way I want to be treated?": 1,
         "Should I trust someone who has hurt me?": 0,
         "Will I be a positive force in the world?": 1,
-        "Will I be a negative force in the world?": 0
+        "Will I be a negative force in the world?": 0,
+        "Am I better than everyone else?": 1,
+        "Am I worse than everyone else?": 0,
+        "Am I better than my enemies?": 1,
+        "Am I worse than my enemies?": 0,
+        "Am I better than Hitler?": 1,
+        "Is nobody better than me?": 0,
+        "Am I good?": 1,
+        "Am I not good?": 0,
+        "Aren't I a good person?": 1,
+        "Aren't I a bad person?": 0,
+        "Am I not bad?": 1,
+        "Am I bad?": 0,
+        "Am I not a loser?": 1,
+        "Do I lose?": 0,
+        "Am I not a failure?": 1,
+        "Do I fail?": 0
     }
 }
