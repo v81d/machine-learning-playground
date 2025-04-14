@@ -2,8 +2,12 @@ import os
 import spacy
 import json
 import asyncio
-import time
-from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn.ensemble import (
+    VotingClassifier,
+    RandomForestClassifier,
+    GradientBoostingClassifier,
+    AdaBoostClassifier,
+)
 
 
 def init():
@@ -24,60 +28,100 @@ d8(  888        888           888           .8'     `888.   888          `888'  
     )
 
 
-async def loading_animation():
+async def loading_animation(message):
     global anim_start
     os.system("clear")
-    anim_start = time.time()
     try:
         while True:
             for char in "|/-\\":
-                print(
-                    f'\rLoading base model "en_core_web_md" {char}', end="", flush=True
-                )
+                print(f"\r{message} {char}", end="", flush=True)
                 await asyncio.sleep(0.2)
     except asyncio.CancelledError:
         pass
 
 
-async def load_model_with_animation():
-    global nlp
-    animation_task = asyncio.create_task(loading_animation())
-    nlp = await asyncio.to_thread(spacy.load, "en_core_web_md")
+async def run_with_animation(message, func, *args, **kwargs):
+    animation_task = asyncio.create_task(loading_animation(message))
+    result = await asyncio.to_thread(func, *args, **kwargs)
     animation_task.cancel()
-    print(
-        f'\rLoading base model "en_core_web_md" ... Done in {round(time.time() - anim_start, 2)}s!'
+    return result
+
+
+async def load_model():
+    global nlp
+    nlp = await run_with_animation(
+        'Loading base model "en_core_web_md" ...', spacy.load, "en_core_web_md"
     )
 
 
-asyncio.run(load_model_with_animation())
-
-with open("./training/arrAIys/data.json", "r") as file:
-    data = json.load(file)
-    metadata = data["metadata"]
-    training_data = data["data"]
-
-unvectorized_input = list(training_data.keys())
-labels = list(training_data.values())
-
-vectors = [nlp(item.lower()).vector for item in unvectorized_input]
-
-ai = HistGradientBoostingClassifier()
-ai.fit(vectors, labels)  # vectors = input data, labels = output data
-
-while True:
-    # Introduction
-    init()
-    test = input("Welcome to arrAIys! Enter an input to test: ")
-    vector = nlp(test).vector
-    guess = "".join(map(str, ai.predict([vector]).tolist()))
-    probas = ai.predict_proba([vector])
-
-    # Results
-    init()
-    print(
-        f'\033[1;32mClassification of [\033[1;36mtest: str = "{test}"\033[1;32m]: \033[1;33m{metadata[guess]}\033[1;32m (Confidence: \033[1;31m{max(probas[0]) * 100:.2f}%\033[1;32m)\033[0m'
+async def vectorize_data(items):
+    return await run_with_animation(
+        "Vectorizing training data ...",
+        lambda x: [nlp(item.lower()).vector for item in x],
+        items,
     )
 
-    resume = input("Do you want to test another input? (Y/n): \033[0m").lower()
-    if resume == "n":
-        break
+
+async def train_model(model, X, y):
+    return await run_with_animation(
+        "Training the ensemble model ...", lambda m, x, y: m.fit(x, y), model, X, y
+    )
+
+
+async def main():
+    await load_model()
+
+    with open("./training/arrAIys/data.json", "r") as file:
+        data = json.load(file)
+        metadata = data["metadata"]
+        training_data = data["data"]
+
+    raw_input = list(training_data.keys())
+    labels = list(training_data.values())
+
+    vectors = await vectorize_data(raw_input)
+
+    # Construct the ensemble model using a voting classifier
+    # Amalgamates the predictions of multiple classifiers to reduce classifier bias and thus reinforce the final output
+    ai = VotingClassifier(
+        estimators=[
+            ("rf", RandomForestClassifier(n_estimators=100, random_state=42)),
+            (
+                "gb",
+                GradientBoostingClassifier(
+                    n_estimators=100, learning_rate=0.1, random_state=42
+                ),
+            ),
+            ("ab", AdaBoostClassifier(n_estimators=100, random_state=42)),
+        ],
+        voting="soft",  # 'soft' takes the average vote, while 'hard' takes the majority vote
+        # Soft voting is better in this specific case, since the models return probabilities
+    )
+    # Note: In scikit-learn, an "estimator" is any object that can be trained on data and make predictions.
+
+    await train_model(
+        ai, vectors, labels
+    )  # 'vectors' = input data, 'labels' = output data
+
+    while True:
+        # Front-end: prompt user for input
+        init()
+        user_input = input("Welcome to arrAIys! Enter an input to test: ")
+
+        # Back-end: process input
+        vector = nlp(user_input).vector
+        guess = "".join(map(str, ai.predict([vector]).tolist()))
+        probas = ai.predict_proba([vector])
+
+        # Conclusion: display result
+        init()
+        print(
+            f'\033[1;32mClassification of [\033[1;36muser_input: str = "{user_input}"\033[1;32m]: \033[1;33m{metadata[guess]}\033[1;32m (Confidence: \033[1;31m{max(probas[0]) * 100:.2f}%\033[1;32m)\033[0m'
+        )
+
+        resume = input("Do you want to test another input? (Y/n): \033[0m").lower()
+        if resume == "n":
+            break
+
+
+asyncio.run(main())
