@@ -119,7 +119,9 @@ async def main():
             f'\033[1;32mClassification of [\033[1;36muser_input: str = "\033[4;34m{user_input}\033[0m\033[1;36m"]\033[1;32m: \033[1;33m{metadata[guess]}\033[1;32m (Confidence: \033[1;31m{max(probas[0]) * 100:.2f}%\033[1;32m)\033[0m'
         )
 
-        resume = input("\033[31marrAIys can make mistakes. Check important information.\033[0m Do you want to test another input? (Y/n): \033[0m").lower()
+        resume = input(
+            "\033[31marrAIys can make mistakes. Check important information.\033[0m Do you want to test another input? (Y/n): \033[0m"
+        ).lower()
         if resume == "n":
             os.system("clear")
             break
